@@ -10,7 +10,7 @@ if [ -z "$1" ]; then
 fi
 HOSTFILE=$1
 
-python ../scripts/wait_for_vllm_servers.py --hostfile "$HOSTFILE" --output ../scripts/swarm.hostfile
+python ../scripts/wait_for_vllm_servers.py --hostfile "$HOSTFILE" --output ../scripts/swarm.hostfile.$$
 
-python ./blackboard_example.py --hostfile ../scripts/swarm.hostfile --model openai/gpt-oss-120b --log-dir ./logs
+python ./blackboard_example.py --hostfile ../scripts/swarm.hostfile.$$ --model openai/gpt-oss-120b --log-dir ./logs.$$
 

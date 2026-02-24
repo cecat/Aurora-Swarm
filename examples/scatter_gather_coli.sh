@@ -1,3 +1,9 @@
+#!/bin/bash
+#
+if [ -z "$1" ]; then
+    echo "Usage: $0 <hostfile>"
+    exit 1
+fi
 HOSTFILE=$1
 
 python ../scripts/wait_for_vllm_servers.py --hostfile $HOSTFILE --output ../scripts/swarm.hostfile
