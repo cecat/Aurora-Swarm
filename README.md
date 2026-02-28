@@ -1,5 +1,6 @@
 # Aurora Swarm
 
+
 Communication patterns for orchestrating large-scale LLM agent swarms on Aurora.
 
 Aurora Swarm provides an async Python library for coordinating thousands of LLM agent endpoints using common distributed communication patterns — broadcast, scatter-gather, tree-reduce, blackboard, and multi-stage pipelines. It manages pooled HTTP connections with semaphore-based concurrency control so you can safely drive 1,000–4,000+ agents from a single orchestrator process.
