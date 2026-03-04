@@ -1,11 +1,11 @@
 #!/bin/bash
-#PBS -N gpt_oss_120b_vllm
+#PBS -N tree_reduce 
 #PBS -l walltime=01:00:00
 #PBS -A ModCon
-#PBS -q debug-scaling
+#PBS -q next-eval
 #PBS -o output.log
 #PBS -e error.log
-#PBS -l select=16
+#PBS -l select=2
 #PBS -l filesystems=flare:home
 #PBS -l place=scatter
 #PBS -j oe
@@ -35,7 +35,7 @@ start_vllm_on_host() {
     local host=$1
     local model=$2
     local port=$3
-    if ! ssh -o ConnectTimeout="${SSH_TIMEOUT}" -o StrictHostKeyChecking=no "$host" "bash -l -c 'cd $SCRIPT_DIR && USE_FRAMEWORKS=${USE_FRAMEWORKS} && VLLM_HOST_PORT=${port} ./start_oss120b.sh \"$model\"'" 2>&1; then
+    if ! ssh -o ConnectTimeout="${SSH_TIMEOUT}" -o StrictHostKeyChecking=no "$host" "bash -c 'cd $SCRIPT_DIR && export USE_FRAMEWORKS=${USE_FRAMEWORKS} && export VLLM_HOST_PORT=${port} && ./start_oss120b.sh \"$model\"'" 2>&1; then
         echo "$(date) Failed to launch vLLM on $host (model: $model)"
         return 1
     fi
