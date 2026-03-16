@@ -146,6 +146,7 @@ Aurora-Swarm/
 │   ├── BATCH_PROMPTING_QUICKREF.md  # Quick reference for batch API usage
 │   ├── IMPLEMENTATION_SUMMARY.md    # Batch implementation summary and performance results
 │   └── CONTEXT_LENGTH.md      # Context length config and dynamic sizing
+├── docs/PERFORMANCE_EVALUATION.md   # How to measure vLLM startup, app timing, throughput
 ├── test_batch_integration.py  # Standalone batch vs non-batch comparison
 ├── pyproject.toml
 └── README.md                  # This file

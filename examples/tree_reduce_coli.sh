@@ -32,7 +32,9 @@ python ../scripts/wait_for_vllm_servers.py --hostfile "$HOSTFILE" --output ../sc
 
 python ./tree_reduce_coli.py /home/brettin/ModCon/brettin/Aurora-Inferencing/examples/TOM.COLI/batch_1/ \
     --hostfile ../scripts/swarm.hostfile \
-    --num-files 16 \
+    --num-files 64 \
+    --concurrency 1024 \
+    --connector-limit 256 \
     --fanin "$FANIN" \
     --max-tokens "$MAX_TOKENS" \
     --max-tokens-contingency "$MAX_TOKENS_CONTINGENCY" \
@@ -41,4 +43,4 @@ python ./tree_reduce_coli.py /home/brettin/ModCon/brettin/Aurora-Inferencing/exa
     --monitor-sockets \
     --socket-interval 10 \
     --plot-sockets \
-    --plot-output socket_usage.png
+    --plot-output socket_usage.128nodes.64file.png

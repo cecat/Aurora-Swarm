@@ -9,10 +9,27 @@ the base :class:`AgentPool`.
 from __future__ import annotations
 
 import asyncio
+import math
 import os
 import aiohttp
 
 from openai import AsyncOpenAI
+
+# Retry on connection/timeout errors (transient when many concurrent connections open)
+def _is_retryable_connection_error(exc: BaseException) -> bool:
+    name = type(exc).__name__
+    msg = str(exc).lower()
+    return (
+        name
+        in (
+            "APIConnectionError",
+            "APITimeoutError",
+            "ConnectionError",
+            "TimeoutError",
+        )
+        or "connection" in msg
+        or "timeout" in msg
+    )
 
 from aurora_swarm.hostfile import AgentEndpoint
 from aurora_swarm.pool import AgentPool, Response
@@ -51,7 +68,17 @@ class VLLMPool(AgentPool):
     connector_limit:
         Maximum TCP connections in the aiohttp pool.
     timeout:
-        Per-request timeout in seconds.
+        Base per-request timeout in seconds. Single requests use this;
+        batch requests use max(timeout, scaled) where scaled depends on batch size.
+    batch_concurrency:
+        vLLM's max concurrent sequences (waves). Used to scale batch timeout;
+        default 256.
+    timeout_per_sequence:
+        Estimated seconds per sequence for batch timeout scaling. Can be set via
+        AURORA_SWARM_TIMEOUT_PER_SEQUENCE. Default 60.0.
+    batch_timeout_cap:
+        If set, cap the computed batch timeout so one huge batch does not get
+        an extreme value. Optional.
     """
 
     def __init__(
@@ -66,6 +93,9 @@ class VLLMPool(AgentPool):
         concurrency: int = 512,
         connector_limit: int = 1024,
         timeout: float = 300.0,
+        batch_concurrency: int = 256,
+        timeout_per_sequence: float | None = None,
+        batch_timeout_cap: float | None = None,
     ) -> None:
         super().__init__(
             endpoints,
@@ -75,7 +105,14 @@ class VLLMPool(AgentPool):
         )
         self._model = model
         self._use_batch = use_batch
-        
+        self._batch_concurrency = batch_concurrency
+        self._timeout_per_sequence = (
+            timeout_per_sequence
+            if timeout_per_sequence is not None
+            else float(os.environ.get("AURORA_SWARM_TIMEOUT_PER_SEQUENCE", "60.0"))
+        )
+        self._batch_timeout_cap = batch_timeout_cap
+
         # Load from environment with fallbacks
         self._max_tokens = (
             max_tokens
@@ -176,7 +213,7 @@ class VLLMPool(AgentPool):
             )
         else:
             tokens = max_tokens
-        
+
         async with self._semaphore:
             try:
                 async with session.post(
@@ -273,38 +310,64 @@ class VLLMPool(AgentPool):
         else:
             tokens = max_tokens
 
-        async with self._semaphore:
-            try:
-                # Call completions API with batch prompts
-                response = await client.completions.create(
-                    model=self._model,
-                    prompt=prompts,
-                    max_tokens=tokens,
-                )
+        # Batch-size-dependent timeout: scale with number of waves
+        n = len(prompts)
+        waves = max(1, math.ceil(n / self._batch_concurrency))
+        scaled = waves * self._timeout_per_sequence
+        effective_timeout = max(self._timeout, scaled)
+        if self._batch_timeout_cap is not None:
+            effective_timeout = min(effective_timeout, self._batch_timeout_cap)
 
-                # Map choices to Response objects
-                results: list[Response] = []
-                for i, choice in enumerate(response.choices):
-                    results.append(
+        async with self._semaphore:
+            last_exc: BaseException | None = None
+            for attempt in range(6):  # 6 attempts total (0..5)
+                try:
+                    # Call completions API with batch prompts
+                    response = await client.completions.create(
+                        model=self._model,
+                        prompt=prompts,
+                        max_tokens=tokens,
+                        timeout=effective_timeout,
+                    )
+
+                    # Map choices to Response objects
+                    results: list[Response] = []
+                    for i, choice in enumerate(response.choices):
+                        results.append(
+                            Response(
+                                success=True,
+                                text=choice.text,
+                                agent_index=agent_index,
+                            )
+                        )
+                    return results
+
+                except Exception as exc:
+                    last_exc = exc
+                    if attempt < 5 and _is_retryable_connection_error(exc):
+                        await asyncio.sleep(2**attempt)
+                        continue
+                    # On error, return failed Response for each prompt
+                    return [
                         Response(
-                            success=True,
-                            text=choice.text,
+                            success=False,
+                            text="",
+                            error=f"{type(exc).__name__}: {str(exc)}",
                             agent_index=agent_index,
                         )
-                    )
-                return results
-
-            except Exception as exc:
-                # On error, return failed Response for each prompt
-                return [
-                    Response(
-                        success=False,
-                        text="",
-                        error=f"{type(exc).__name__}: {str(exc)}",
-                        agent_index=agent_index,
-                    )
-                    for _ in prompts
-                ]
+                        for _ in prompts
+                    ]
+            # Should not reach here; if we do, treat last_exc as final failure
+            assert last_exc is not None
+            return [
+                Response(
+                    success=False,
+                    text="",
+                    error=f"{type(last_exc).__name__}: {str(last_exc)}",
+                    agent_index=agent_index,
+                )
+                for _ in prompts
+            ]
 
     async def send_all_batched(
         self,
@@ -369,6 +432,9 @@ class VLLMPool(AgentPool):
         child._concurrency = self._concurrency
         child._connector_limit = self._connector_limit
         child._timeout = self._timeout
+        child._batch_concurrency = self._batch_concurrency
+        child._timeout_per_sequence = self._timeout_per_sequence
+        child._batch_timeout_cap = self._batch_timeout_cap
         child._semaphore = self._semaphore
         child._session = self._session
         child._model = self._model

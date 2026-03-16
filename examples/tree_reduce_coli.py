@@ -1,8 +1,8 @@
 """Tree-Reduce pattern example using TOM.COLI bacterial gene dataset.
 
 Two-phase flow:
-1. Leaf phase: For each chunk file, run scatter_gather on per-gene prompts
-   (test.coli_v3 style). Collect all gene responses into a flat list.
+1. Leaf phase: Load all gene prompts from chunk files, run one scatter_gather
+   over all of them (test.coli_v3 style). Collect gene responses into a flat list.
 2. Reduce phase: Group gene responses by fanin (e.g. 16), run one reduce per
    group, then hierarchically reduce those outputs until a single synthesis.
    The reduce asks whether genes might function together for higher-level
@@ -80,7 +80,7 @@ def parse_gene_line(
     parts = line.split("\t")
     if len(parts) < 4:
         print_with_timestamp(
-            f"Warning: Line {line_num} has fewer than 4 fields, skipping: {line[:50]}..."
+            f"Warning: Line {line_num} has fewer than 4 fields ({len(parts)}), skipping: {line[:50]}..."
         )
         return None
     genome_id = parts[0]
@@ -122,6 +122,18 @@ def read_chunk_genes(chunk_path: Path) -> list[str]:
             prompt = construct_prompt(organism, gene_id, gene_description)
             prompts.append(prompt)
     return prompts
+
+
+def read_all_chunk_genes(chunk_files: list[Path]) -> list[str]:
+    """Read all chunk files in order and return one flat list of gene prompts."""
+    all_prompts = []
+    for chunk_path in chunk_files:
+        prompts = read_chunk_genes(chunk_path)
+        if not prompts:
+            print_with_timestamp(f"  Warning: No valid genes in {chunk_path.name}")
+            continue
+        all_prompts.extend(prompts)
+    return all_prompts
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +342,7 @@ async def run_tree_reduce_coli(
     settings: dict | None = None,
 ) -> tuple[str | None, dict]:
     """
-    Run leaf phase (scatter_gather per chunk) then reduce phase.
+    Run leaf phase (one scatter_gather over all prompts) then reduce phase.
     Returns (final_result_text, timing_stats).
     """
     timing = {
@@ -359,29 +371,27 @@ async def run_tree_reduce_coli(
             recorder.set_stage(f"reduce {level}")
 
     try:
-        # Leaf phase: collect a flat list of individual gene responses (across all chunks)
-        all_gene_responses = []
+        # Leaf phase: load all prompts from chunk files, then one scatter_gather
+        all_prompts = read_all_chunk_genes(chunk_files)
+        if not all_prompts:
+            print_with_timestamp("Leaf phase: no valid prompts from chunk files")
+            return None, timing
+
+        print_with_timestamp(
+            f"Leaf phase: scatter_gather over {len(all_prompts)} prompts from {len(chunk_files)} chunk files"
+        )
         leaf_start = datetime.now()
-        total_prompts = 0
-
-        for idx, chunk_path in enumerate(chunk_files, 1):
-            print_with_timestamp(f"Leaf phase: chunk {idx}/{len(chunk_files)} ({chunk_path.name})")
-            prompts = read_chunk_genes(chunk_path)
-            if not prompts:
-                print_with_timestamp(f"  Warning: No valid genes in {chunk_path.name}")
-                continue
-
-            responses = await scatter_gather(pool, prompts)
-            for r in responses:
-                if r.success and _has_content(r.text):
-                    text = (
-                        r.text[:MAX_RESPONSE_CHARS] + "..."
-                        if len(r.text) > MAX_RESPONSE_CHARS
-                        else r.text
-                    )
-                    all_gene_responses.append(text)
-            total_prompts += len(prompts)
-
+        responses = await scatter_gather(pool, all_prompts)
+        all_gene_responses = []
+        for r in responses:
+            if r.success and _has_content(r.text):
+                text = (
+                    r.text[:MAX_RESPONSE_CHARS] + "..."
+                    if len(r.text) > MAX_RESPONSE_CHARS
+                    else r.text
+                )
+                all_gene_responses.append(text)
+        total_prompts = len(all_prompts)
         leaf_end = datetime.now()
         timing["leaf_seconds"] = (leaf_end - leaf_start).total_seconds()
         timing["total_prompts"] = total_prompts
@@ -488,13 +498,32 @@ async def main() -> int:
         "--concurrency",
         type=int,
         default=64,
-        help="Maximum concurrent requests (default: 64)",
+        help="Semaphore value: max in-flight requests across all vLLM agents (default: 64). Per-agent max ≈ this / pool size.",
     )
     parser.add_argument(
         "--connector-limit",
         type=int,
         default=1024,
         help="Max TCP connections in pool (default: 1024)",
+    )
+    parser.add_argument(
+        "--batch-concurrency",
+        type=int,
+        default=256,
+        help="vLLM max concurrent sequences for batch timeout scaling (default: 256)",
+    )
+    parser.add_argument(
+        "--timeout-per-sequence",
+        type=float,
+        default=60.0,
+        help="Estimated seconds per sequence for batch timeout scaling (default: 60)",
+    )
+    parser.add_argument(
+        "--batch-timeout-cap",
+        type=float,
+        default=None,
+        metavar="SECS",
+        help="Cap batch timeout in seconds (default: no cap)",
     )
     parser.add_argument(
         "--fanin",
@@ -567,6 +596,10 @@ async def main() -> int:
     print_with_timestamp("=" * 80)
     print_with_timestamp(f"concurrency: {args.concurrency}")
     print_with_timestamp(f"connector_limit: {args.connector_limit}")
+    print_with_timestamp(f"batch_concurrency: {args.batch_concurrency}")
+    print_with_timestamp(f"timeout_per_sequence: {args.timeout_per_sequence}")
+    if args.batch_timeout_cap is not None:
+        print_with_timestamp(f"batch_timeout_cap: {args.batch_timeout_cap}")
     print_with_timestamp(f"fanin: {args.fanin}")
     print_with_timestamp(f"num_files: {len(chunk_files)}")
     print_with_timestamp(f"max_tokens (leaves): {args.max_tokens}")
@@ -582,6 +615,9 @@ async def main() -> int:
         timeout=args.timeout,
         concurrency=args.concurrency,
         connector_limit=args.connector_limit,
+        batch_concurrency=args.batch_concurrency,
+        timeout_per_sequence=args.timeout_per_sequence,
+        batch_timeout_cap=args.batch_timeout_cap,
     )
 
     plot_settings = (

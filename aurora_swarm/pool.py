@@ -99,6 +99,11 @@ class AgentPool:
         return len(self._endpoints)
 
     @property
+    def timeout(self) -> float:
+        """Base per-request timeout in seconds."""
+        return self._timeout
+
+    @property
     def endpoints(self) -> list[AgentEndpoint]:
         return list(self._endpoints)
 
