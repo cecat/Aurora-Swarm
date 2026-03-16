@@ -2,10 +2,10 @@
 #PBS -N tree_reduce 
 #PBS -l walltime=01:00:00
 #PBS -A ModCon
-#PBS -q next-eval
-#PBS -o output.log
-#PBS -e error.log
-#PBS -l select=2
+#PBS -q debug-scaling
+#PBS -o 128.output.log
+#PBS -e 129.error.log
+#PBS -l select=128
 #PBS -l filesystems=flare:home
 #PBS -l place=scatter
 #PBS -j oe
