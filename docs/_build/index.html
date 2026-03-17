@@ -66,6 +66,9 @@
 <li><p>Enabled by default, transparent to existing code</p></li>
 <li><p>See <a class="reference internal" href="batch_prompting.html"><span class="doc">Batch Prompting</span></a> for details</p></li>
 </ul>
+<p><strong>Aggregators</strong> — Combine broadcast (or other) responses with <a class="reference internal" href="aggregators.html"><span class="doc">Aggregators</span></a> (e.g. <code class="docutils literal notranslate"><span class="pre">majority_vote</span></code>, <code class="docutils literal notranslate"><span class="pre">concat</span></code>). See the runnable example <code class="docutils literal notranslate"><span class="pre">examples/broadcast_aggregators.py</span></code>.</p>
+<p><strong>Tree-Reduce</strong> — See the runnable example <code class="docutils literal notranslate"><span class="pre">examples/tree_reduce_example.py</span></code>.</p>
+<p><strong>Embedding scatter-gather</strong> — Use <a class="reference internal" href="api.html#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a> with <a class="reference internal" href="api.html#aurora_swarm.patterns.embedding.scatter_gather_embeddings" title="aurora_swarm.patterns.embedding.scatter_gather_embeddings"><code class="xref py py-func docutils literal notranslate"><span class="pre">scatter_gather_embeddings()</span></code></a> for scatter-gather over <code class="docutils literal notranslate"><span class="pre">/v1/embeddings</span></code> endpoints. Same hostfile and <code class="docutils literal notranslate"><span class="pre">by_tag</span></code> usage as LLM pools. See <a class="reference internal" href="api.html"><span class="doc">API Reference</span></a> (Embedding pool, Scatter-Gather (embeddings)).</p>
 </section>
 <section id="communication-patterns">
 <h2>Communication patterns<a class="headerlink" href="#communication-patterns" title="Link to this heading">¶</a></h2>
@@ -121,6 +124,21 @@
 <li class="toctree-l2"><a class="reference internal" href="context_length.html#dynamic-sizing">Dynamic sizing</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="pools_and_connections.html">Pools and connections</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pools_and_connections.html#concepts">Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pools_and_connections.html#diagram">Diagram</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="aggregators.html">Aggregators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#categorical">Categorical</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#text">Text</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#quality-selection">Quality selection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#structured-data">Structured data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#numeric">Numeric</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#diagnostics">Diagnostics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregators.html#usage-with-broadcast">Usage with broadcast</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#core">Core</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#communication-patterns">Communication patterns</a></li>
@@ -169,6 +187,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="batch_prompting.html">Batch Prompting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="context_length.html">Context length configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pools_and_connections.html">Pools and connections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aggregators.html">Aggregators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 </ul>
 

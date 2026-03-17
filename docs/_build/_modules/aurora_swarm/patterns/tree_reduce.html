@@ -40,10 +40,14 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">aurora_swarm.pool</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentPool</span><span class="p">,</span> <span class="n">Response</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_has_content</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if response text has non-whitespace content.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">((</span><span class="n">text</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="tree_reduce">
@@ -74,23 +78,26 @@
 <span class="sd">        round-robin).  Otherwise the same *prompt* is broadcast.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># -- leaf phase ----------------------------------------------------------</span>
+    <span class="c1"># Use send_all (chat completions per prompt) rather than</span>
+    <span class="c1"># send_all_batched (raw completions) so chat models get the</span>
+    <span class="c1"># expected message format.</span>
     <span class="k">if</span> <span class="n">items</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">leaf_prompts</span> <span class="o">=</span> <span class="p">[</span><span class="n">prompt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{item}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">it</span><span class="p">))</span> <span class="k">for</span> <span class="n">it</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]</span>
-        <span class="n">leaf_responses</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pool</span><span class="o">.</span><span class="n">send_all_batched</span><span class="p">(</span><span class="n">leaf_prompts</span><span class="p">)</span>
+        <span class="n">leaf_responses</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pool</span><span class="o">.</span><span class="n">send_all</span><span class="p">(</span><span class="n">leaf_prompts</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">leaf_responses</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pool</span><span class="o">.</span><span class="n">broadcast_prompt</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
 
     <span class="c1"># -- reduction phase -----------------------------------------------------</span>
-    <span class="n">current</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">leaf_responses</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">success</span><span class="p">]</span>
+    <span class="n">current</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">leaf_responses</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">success</span> <span class="ow">and</span> <span class="n">_has_content</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="p">]</span>
     <span class="n">level</span> <span class="o">=</span> <span class="mi">1</span>
 
     <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="c1"># chunk into groups of *fanin*</span>
         <span class="n">groups</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">current</span><span class="p">),</span> <span class="n">fanin</span><span class="p">):</span>
             <span class="n">groups</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">fanin</span><span class="p">])</span>
 
-        <span class="c1"># each group gets sent to one supervisor agent</span>
         <span class="n">supervisor_prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
             <span class="n">combined</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">---</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
@@ -98,9 +105,10 @@
             <span class="n">filled</span> <span class="o">=</span> <span class="n">filled</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{level}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">level</span><span class="p">))</span>
             <span class="n">supervisor_prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filled</span><span class="p">)</span>
 
-        <span class="c1"># scatter supervisor work across available agents</span>
-        <span class="n">sup_responses</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pool</span><span class="o">.</span><span class="n">send_all_batched</span><span class="p">(</span><span class="n">supervisor_prompts</span><span class="p">)</span>
-        <span class="n">current</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">sup_responses</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">success</span><span class="p">]</span>
+        <span class="n">sup_responses</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pool</span><span class="o">.</span><span class="n">send_all</span><span class="p">(</span><span class="n">supervisor_prompts</span><span class="p">)</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">sup_responses</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">success</span> <span class="ow">and</span> <span class="n">_has_content</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="p">]</span>
         <span class="n">level</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">current</span><span class="p">:</span>
@@ -138,6 +146,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../batch_prompting.html">Batch Prompting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../context_length.html">Context length configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pools_and_connections.html">Pools and connections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../aggregators.html">Aggregators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
 </ul>
 

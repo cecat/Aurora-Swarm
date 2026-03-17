@@ -14,7 +14,7 @@
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Context length configuration" href="context_length.html" />
+    <link rel="prev" title="Aggregators" href="aggregators.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -98,6 +98,12 @@
 <dt class="sig sig-object py" id="aurora_swarm.AgentPool.size">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#aurora_swarm.AgentPool.size" title="Link to this definition">¶</a></dt>
 <dd><p>Number of agents in the pool.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.AgentPool.timeout">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">timeout</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#aurora_swarm.AgentPool.timeout" title="Link to this definition">¶</a></dt>
+<dd><p>Base per-request timeout in seconds.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -200,7 +206,7 @@ VLLMPool overrides this to use batch API for efficiency.</p>
 <dd class="field-even"><p>Responses in the same order as input prompts.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.Response" title="aurora_swarm.Response">Response</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -215,6 +221,147 @@ VLLMPool overrides this to use batch API for efficiency.</p>
 </dd>
 </dl>
 </dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.</span></span><span class="sig-name descname"><span class="pre">EmbeddingPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Async pool of embedding endpoints (OpenAI-compatible /v1/embeddings).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>endpoints</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentEndpoint</span></code></a> | <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]</span>) – Embedding endpoints — either <a class="reference internal" href="#aurora_swarm.AgentEndpoint" title="aurora_swarm.AgentEndpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentEndpoint</span></code></a> objects or
+<code class="docutils literal notranslate"><span class="pre">(host,</span> <span class="pre">port)</span></code> tuples (tags will be empty).</p></li>
+<li><p><strong>model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Embedding model id (e.g. sentence-transformers/all-MiniLM-L6-v2).</p></li>
+<li><p><strong>concurrency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum number of in-flight requests (asyncio semaphore size).</p></li>
+<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Per-request timeout in seconds.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#aurora_swarm.EmbeddingPool.size" title="Link to this definition">¶</a></dt>
+<dd><p>Number of endpoints in the pool.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.timeout">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">timeout</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#aurora_swarm.EmbeddingPool.timeout" title="Link to this definition">¶</a></dt>
+<dd><p>Per-request timeout in seconds.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.endpoints">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">endpoints</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint"><span class="pre">AgentEndpoint</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aurora_swarm.EmbeddingPool.endpoints" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.by_tag">
+<span class="sig-name descname"><span class="pre">by_tag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.by_tag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.by_tag" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool of endpoints whose tag <em>key</em> equals <em>value</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.sample">
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.sample" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool of <em>n</em> randomly chosen endpoints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.select">
+<span class="sig-name descname"><span class="pre">select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.select"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.select" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool with endpoints at the given indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.slice">
+<span class="sig-name descname"><span class="pre">slice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.slice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.slice" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool from index <em>start</em> to <em>stop</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.embed_one">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">embed_one</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agent_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.embed_one"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.embed_one" title="Link to this definition">¶</a></dt>
+<dd><p>Request embedding for <em>text</em> from the endpoint at <em>agent_index</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingResponse" title="aurora_swarm.embedding_pool.EmbeddingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingResponse</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.embed_all">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">embed_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.embed_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.embed_all" title="Link to this definition">¶</a></dt>
+<dd><p>Scatter <em>texts</em> across endpoints round-robin; return responses in input order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingResponse" title="aurora_swarm.embedding_pool.EmbeddingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingResponse</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingPool.close">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingPool.close" title="Link to this definition">¶</a></dt>
+<dd><p>Release resources. AsyncOpenAI clients do not require explicit close.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingResponse">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.</span></span><span class="sig-name descname"><span class="pre">EmbeddingResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">success</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agent_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingResponse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.EmbeddingResponse" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Result of a single embedding request.</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingResponse.success">
+<span class="sig-name descname"><span class="pre">success</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#aurora_swarm.EmbeddingResponse.success" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingResponse.embedding">
+<span class="sig-name descname"><span class="pre">embedding</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#aurora_swarm.EmbeddingResponse.embedding" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingResponse.error">
+<span class="sig-name descname"><span class="pre">error</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#aurora_swarm.EmbeddingResponse.error" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.EmbeddingResponse.agent_index">
+<span class="sig-name descname"><span class="pre">agent_index</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">-1</span></span><a class="headerlink" href="#aurora_swarm.EmbeddingResponse.agent_index" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -249,7 +396,7 @@ VLLMPool overrides this to use batch API for efficiency.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="aurora_swarm.VLLMPool">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.</span></span><span class="sig-name descname"><span class="pre">VLLMPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'openai/gpt-oss-120b'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens_aggregation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_max_context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connector_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/vllm_pool.html#VLLMPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.VLLMPool" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.</span></span><span class="sig-name descname"><span class="pre">VLLMPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'openai/gpt-oss-120b'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens_aggregation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_max_context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connector_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">256</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_per_sequence</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_timeout_cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/vllm_pool.html#VLLMPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.VLLMPool" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#aurora_swarm.pool.AgentPool" title="aurora_swarm.pool.AgentPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentPool</span></code></a></p>
 <p>Agent pool that communicates via vLLM’s OpenAI-compatible API.</p>
 <dl class="field-list simple">
@@ -273,7 +420,14 @@ send_all_batched. If False, fall back to individual requests.
 Defaults to True.</p></li>
 <li><p><strong>concurrency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum number of in-flight requests.</p></li>
 <li><p><strong>connector_limit</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum TCP connections in the aiohttp pool.</p></li>
-<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Per-request timeout in seconds.</p></li>
+<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Base per-request timeout in seconds. Single requests use this;
+batch requests use max(timeout, scaled) where scaled depends on batch size.</p></li>
+<li><p><strong>batch_concurrency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – vLLM’s max concurrent sequences (waves). Used to scale batch timeout;
+default 256.</p></li>
+<li><p><strong>timeout_per_sequence</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Estimated seconds per sequence for batch timeout scaling. Can be set via
+AURORA_SWARM_TIMEOUT_PER_SEQUENCE. Default 60.0.</p></li>
+<li><p><strong>batch_timeout_cap</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – If set, cap the computed batch timeout so one huge batch does not get
+an extreme value. Optional.</p></li>
 </ul>
 </dd>
 </dl>
@@ -316,7 +470,7 @@ based on average prompt length.</p></li>
 <dd class="field-even"><p>One Response per prompt, in the same order as the input.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.Response" title="aurora_swarm.Response">Response</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -339,7 +493,7 @@ input order.</p>
 <dd class="field-even"><p>Responses in the same order as input prompts.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.Response" title="aurora_swarm.Response">Response</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -358,7 +512,7 @@ input order.</p>
 <dd class="field-even"><p>Parsed endpoints in file order.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.AgentEndpoint" title="aurora_swarm.AgentEndpoint">AgentEndpoint</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentEndpoint</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -407,7 +561,7 @@ input order.</p>
 <dd class="field-even"><p>Parsed endpoints in file order.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint">AgentEndpoint</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentEndpoint</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -474,6 +628,12 @@ input order.</p>
 <dt class="sig sig-object py" id="aurora_swarm.pool.AgentPool.size">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#aurora_swarm.pool.AgentPool.size" title="Link to this definition">¶</a></dt>
 <dd><p>Number of agents in the pool.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.pool.AgentPool.timeout">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">timeout</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#aurora_swarm.pool.AgentPool.timeout" title="Link to this definition">¶</a></dt>
+<dd><p>Base per-request timeout in seconds.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -576,7 +736,7 @@ VLLMPool overrides this to use batch API for efficiency.</p>
 <dd class="field-even"><p>Responses in the same order as input prompts.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response">Response</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -605,7 +765,7 @@ VLLMPool overrides this to use batch API for efficiency.</p>
 </ul>
 <dl class="py class">
 <dt class="sig sig-object py" id="aurora_swarm.vllm_pool.VLLMPool">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.vllm_pool.</span></span><span class="sig-name descname"><span class="pre">VLLMPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'openai/gpt-oss-120b'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens_aggregation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_max_context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connector_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/vllm_pool.html#VLLMPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.vllm_pool.VLLMPool" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.vllm_pool.</span></span><span class="sig-name descname"><span class="pre">VLLMPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'openai/gpt-oss-120b'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tokens_aggregation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_max_context</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_batch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connector_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1024</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">256</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_per_sequence</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_timeout_cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/vllm_pool.html#VLLMPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.vllm_pool.VLLMPool" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#aurora_swarm.pool.AgentPool" title="aurora_swarm.pool.AgentPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentPool</span></code></a></p>
 <p>Agent pool that communicates via vLLM’s OpenAI-compatible API.</p>
 <dl class="field-list simple">
@@ -629,7 +789,14 @@ send_all_batched. If False, fall back to individual requests.
 Defaults to True.</p></li>
 <li><p><strong>concurrency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum number of in-flight requests.</p></li>
 <li><p><strong>connector_limit</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum TCP connections in the aiohttp pool.</p></li>
-<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Per-request timeout in seconds.</p></li>
+<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Base per-request timeout in seconds. Single requests use this;
+batch requests use max(timeout, scaled) where scaled depends on batch size.</p></li>
+<li><p><strong>batch_concurrency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – vLLM’s max concurrent sequences (waves). Used to scale batch timeout;
+default 256.</p></li>
+<li><p><strong>timeout_per_sequence</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Estimated seconds per sequence for batch timeout scaling. Can be set via
+AURORA_SWARM_TIMEOUT_PER_SEQUENCE. Default 60.0.</p></li>
+<li><p><strong>batch_timeout_cap</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – If set, cap the computed batch timeout so one huge batch does not get
+an extreme value. Optional.</p></li>
 </ul>
 </dd>
 </dl>
@@ -672,7 +839,7 @@ based on average prompt length.</p></li>
 <dd class="field-even"><p>One Response per prompt, in the same order as the input.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.Response" title="aurora_swarm.Response">Response</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -695,7 +862,7 @@ input order.</p>
 <dd class="field-even"><p>Responses in the same order as input prompts.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>list[<a class="reference internal" href="#aurora_swarm.Response" title="aurora_swarm.Response">Response</a>]</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.pool.Response" title="aurora_swarm.pool.Response"><code class="xref py py-class docutils literal notranslate"><span class="pre">Response</span></code></a>]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -703,9 +870,155 @@ input order.</p>
 </dd></dl>
 
 </section>
-<section id="module-aurora_swarm.aggregators">
-<span id="aggregators"></span><h3>Aggregators<a class="headerlink" href="#module-aurora_swarm.aggregators" title="Link to this heading">¶</a></h3>
-<p>Aggregation strategies for agent responses.</p>
+<section id="embedding-pool">
+<h3>Embedding pool<a class="headerlink" href="#embedding-pool" title="Link to this heading">¶</a></h3>
+<p><a class="reference internal" href="#aurora_swarm.EmbeddingPool" title="aurora_swarm.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a> provides scatter-gather over OpenAI-compatible <code class="docutils literal notranslate"><span class="pre">/v1/embeddings</span></code> endpoints. It uses the same hostfile/endpoint model as <a class="reference internal" href="#aurora_swarm.pool.AgentPool" title="aurora_swarm.pool.AgentPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentPool</span></code></a> (e.g. <a class="reference internal" href="#aurora_swarm.parse_hostfile" title="aurora_swarm.parse_hostfile"><code class="xref py py-func docutils literal notranslate"><span class="pre">parse_hostfile()</span></code></a> and <a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool.by_tag" title="aurora_swarm.embedding_pool.EmbeddingPool.by_tag"><code class="xref py py-meth docutils literal notranslate"><span class="pre">by_tag()</span></code></a> for role-based filtering). Use it with <a class="reference internal" href="#aurora_swarm.patterns.embedding.scatter_gather_embeddings" title="aurora_swarm.patterns.embedding.scatter_gather_embeddings"><code class="xref py py-func docutils literal notranslate"><span class="pre">scatter_gather_embeddings()</span></code></a> for the same “pool + pattern” style as LLM scatter-gather.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingResponse">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.embedding_pool.</span></span><span class="sig-name descname"><span class="pre">EmbeddingResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">success</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">agent_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingResponse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingResponse" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Result of a single embedding request.</p>
+<dl class="field-list simple">
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingResponse.success">
+<span class="sig-name descname"><span class="pre">success</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingResponse.success" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingResponse.embedding">
+<span class="sig-name descname"><span class="pre">embedding</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingResponse.embedding" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingResponse.error">
+<span class="sig-name descname"><span class="pre">error</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingResponse.error" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingResponse.agent_index">
+<span class="sig-name descname"><span class="pre">agent_index</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">-1</span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingResponse.agent_index" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.embedding_pool.</span></span><span class="sig-name descname"><span class="pre">EmbeddingPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">endpoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concurrency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">512</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Async pool of embedding endpoints (OpenAI-compatible /v1/embeddings).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>endpoints</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Sequence</span></code>[<a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint"><code class="xref py py-class docutils literal notranslate"><span class="pre">AgentEndpoint</span></code></a> | <code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]]</span>) – Embedding endpoints — either <code class="xref py py-class docutils literal notranslate"><span class="pre">AgentEndpoint</span></code> objects or
+<code class="docutils literal notranslate"><span class="pre">(host,</span> <span class="pre">port)</span></code> tuples (tags will be empty).</p></li>
+<li><p><strong>model</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Embedding model id (e.g. sentence-transformers/all-MiniLM-L6-v2).</p></li>
+<li><p><strong>concurrency</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Maximum number of in-flight requests (asyncio semaphore size).</p></li>
+<li><p><strong>timeout</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Per-request timeout in seconds.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.size">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.size" title="Link to this definition">¶</a></dt>
+<dd><p>Number of endpoints in the pool.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.timeout">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">timeout</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.timeout" title="Link to this definition">¶</a></dt>
+<dd><p>Per-request timeout in seconds.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.endpoints">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">endpoints</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#aurora_swarm.hostfile.AgentEndpoint" title="aurora_swarm.hostfile.AgentEndpoint"><span class="pre">AgentEndpoint</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.endpoints" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.by_tag">
+<span class="sig-name descname"><span class="pre">by_tag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.by_tag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.by_tag" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool of endpoints whose tag <em>key</em> equals <em>value</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.sample">
+<span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.sample" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool of <em>n</em> randomly chosen endpoints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.select">
+<span class="sig-name descname"><span class="pre">select</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.select"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.select" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool with endpoints at the given indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.slice">
+<span class="sig-name descname"><span class="pre">slice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.slice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.slice" title="Link to this definition">¶</a></dt>
+<dd><p>Return a sub-pool from index <em>start</em> to <em>stop</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.embed_one">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">embed_one</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">agent_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.embed_one"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.embed_one" title="Link to this definition">¶</a></dt>
+<dd><p>Request embedding for <em>text</em> from the endpoint at <em>agent_index</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingResponse" title="aurora_swarm.embedding_pool.EmbeddingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingResponse</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.embed_all">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">embed_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.embed_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.embed_all" title="Link to this definition">¶</a></dt>
+<dd><p>Scatter <em>texts</em> across endpoints round-robin; return responses in input order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingResponse" title="aurora_swarm.embedding_pool.EmbeddingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingResponse</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="aurora_swarm.embedding_pool.EmbeddingPool.close">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/embedding_pool.html#EmbeddingPool.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.embedding_pool.EmbeddingPool.close" title="Link to this definition">¶</a></dt>
+<dd><p>Release resources. AsyncOpenAI clients do not require explicit close.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="aggregators">
+<h3>Aggregators<a class="headerlink" href="#aggregators" title="Link to this heading">¶</a></h3>
+<p>See <a class="reference internal" href="aggregators.html"><span class="doc">Aggregators</span></a> for usage guide and examples.</p>
+<p id="module-aurora_swarm.aggregators">Aggregation strategies for agent responses.</p>
 <p>Every aggregator silently skips responses with <code class="docutils literal notranslate"><span class="pre">success=False</span></code> unless
 <code class="docutils literal notranslate"><span class="pre">include_failures=True</span></code> is passed.</p>
 <dl class="py function">
@@ -867,6 +1180,29 @@ template.</p></li>
 </dd></dl>
 
 </section>
+<section id="scatter-gather-embeddings">
+<h3>Scatter-Gather (embeddings)<a class="headerlink" href="#scatter-gather-embeddings" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="aurora_swarm.patterns.embedding.scatter_gather_embeddings">
+<span class="property"><span class="k"><span class="pre">async</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">aurora_swarm.patterns.embedding.</span></span><span class="sig-name descname"><span class="pre">scatter_gather_embeddings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">embed_pool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">texts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aurora_swarm/patterns/embedding.html#scatter_gather_embeddings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#aurora_swarm.patterns.embedding.scatter_gather_embeddings" title="Link to this definition">¶</a></dt>
+<dd><p>Send <code class="docutils literal notranslate"><span class="pre">texts[i]</span></code> to <code class="docutils literal notranslate"><span class="pre">endpoint[i</span> <span class="pre">%</span> <span class="pre">pool.size]</span></code>, gather in input order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>embed_pool</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingPool" title="aurora_swarm.embedding_pool.EmbeddingPool"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingPool</span></code></a></span>) – Embedding pool (e.g. from parse_hostfile + by_tag).</p></li>
+<li><p><strong>texts</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Texts to embed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One response per text, in same order as <em>texts</em>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<a class="reference internal" href="#aurora_swarm.embedding_pool.EmbeddingResponse" title="aurora_swarm.embedding_pool.EmbeddingResponse"><code class="xref py py-class docutils literal notranslate"><span class="pre">EmbeddingResponse</span></code></a>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 <section id="tree-reduce">
 <h3>Tree-Reduce<a class="headerlink" href="#tree-reduce" title="Link to this heading">¶</a></h3>
 <dl class="py function">
@@ -954,7 +1290,7 @@ returns <code class="docutils literal notranslate"><span class="pre">True</span>
 <dd class="field-even"><p>The final board.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>BoardState</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]]</span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1026,7 +1362,7 @@ stage receives a dedicated, non-overlapping subset.</p></li>
 <dd class="field-even"><p>The transformed output of the final stage.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Any</p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1065,6 +1401,8 @@ stage receives a dedicated, non-overlapping subset.</p></li>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="batch_prompting.html">Batch Prompting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="context_length.html">Context length configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pools_and_connections.html">Pools and connections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="aggregators.html">Aggregators</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#core">Core</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#communication-patterns">Communication patterns</a></li>
@@ -1076,7 +1414,7 @@ stage receives a dedicated, non-overlapping subset.</p></li>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="context_length.html" title="previous chapter">Context length configuration</a></li>
+      <li>Previous: <a href="aggregators.html" title="previous chapter">Aggregators</a></li>
   </ul></li>
 </ul>
 </div>

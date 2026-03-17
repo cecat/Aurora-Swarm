@@ -42,6 +42,8 @@ VLLMPool supports batch prompting to dramatically reduce HTTP overhead:
 
 **Tree-Reduce** — See the runnable example ``examples/tree_reduce_example.py``.
 
+**Embedding scatter-gather** — Use :class:`~aurora_swarm.embedding_pool.EmbeddingPool` with :func:`~aurora_swarm.patterns.embedding.scatter_gather_embeddings` for scatter-gather over ``/v1/embeddings`` endpoints. Same hostfile and ``by_tag`` usage as LLM pools. See :doc:`api` (Embedding pool, Scatter-Gather (embeddings)).
+
 Communication patterns
 ----------------------
 

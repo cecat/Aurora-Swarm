@@ -42,10 +42,27 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">aiohttp</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncOpenAI</span>
+
+<span class="c1"># Retry on connection/timeout errors (transient when many concurrent connections open)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_retryable_connection_error</span><span class="p">(</span><span class="n">exc</span><span class="p">:</span> <span class="ne">BaseException</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">name</span>
+        <span class="ow">in</span> <span class="p">(</span>
+            <span class="s2">&quot;APIConnectionError&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;APITimeoutError&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;ConnectionError&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;TimeoutError&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="ow">or</span> <span class="s2">&quot;connection&quot;</span> <span class="ow">in</span> <span class="n">msg</span>
+        <span class="ow">or</span> <span class="s2">&quot;timeout&quot;</span> <span class="ow">in</span> <span class="n">msg</span>
+    <span class="p">)</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">aurora_swarm.hostfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentEndpoint</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">aurora_swarm.pool</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentPool</span><span class="p">,</span> <span class="n">Response</span>
@@ -86,7 +103,17 @@
 <span class="sd">    connector_limit:</span>
 <span class="sd">        Maximum TCP connections in the aiohttp pool.</span>
 <span class="sd">    timeout:</span>
-<span class="sd">        Per-request timeout in seconds.</span>
+<span class="sd">        Base per-request timeout in seconds. Single requests use this;</span>
+<span class="sd">        batch requests use max(timeout, scaled) where scaled depends on batch size.</span>
+<span class="sd">    batch_concurrency:</span>
+<span class="sd">        vLLM&#39;s max concurrent sequences (waves). Used to scale batch timeout;</span>
+<span class="sd">        default 256.</span>
+<span class="sd">    timeout_per_sequence:</span>
+<span class="sd">        Estimated seconds per sequence for batch timeout scaling. Can be set via</span>
+<span class="sd">        AURORA_SWARM_TIMEOUT_PER_SEQUENCE. Default 60.0.</span>
+<span class="sd">    batch_timeout_cap:</span>
+<span class="sd">        If set, cap the computed batch timeout so one huge batch does not get</span>
+<span class="sd">        an extreme value. Optional.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -101,6 +128,9 @@
         <span class="n">concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span>
         <span class="n">connector_limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
         <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">300.0</span><span class="p">,</span>
+        <span class="n">batch_concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">timeout_per_sequence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">batch_timeout_cap</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">endpoints</span><span class="p">,</span>
@@ -110,7 +140,14 @@
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">model</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_use_batch</span> <span class="o">=</span> <span class="n">use_batch</span>
-        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_batch_concurrency</span> <span class="o">=</span> <span class="n">batch_concurrency</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_timeout_per_sequence</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">timeout_per_sequence</span>
+            <span class="k">if</span> <span class="n">timeout_per_sequence</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;AURORA_SWARM_TIMEOUT_PER_SEQUENCE&quot;</span><span class="p">,</span> <span class="s2">&quot;60.0&quot;</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_batch_timeout_cap</span> <span class="o">=</span> <span class="n">batch_timeout_cap</span>
+
         <span class="c1"># Load from environment with fallbacks</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_max_tokens</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">max_tokens</span>
@@ -213,7 +250,7 @@
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">tokens</span> <span class="o">=</span> <span class="n">max_tokens</span>
-        
+
         <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
@@ -313,38 +350,64 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">tokens</span> <span class="o">=</span> <span class="n">max_tokens</span>
 
-        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># Call completions API with batch prompts</span>
-                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-                    <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span>
-                    <span class="n">prompt</span><span class="o">=</span><span class="n">prompts</span><span class="p">,</span>
-                    <span class="n">max_tokens</span><span class="o">=</span><span class="n">tokens</span><span class="p">,</span>
-                <span class="p">)</span>
+        <span class="c1"># Batch-size-dependent timeout: scale with number of waves</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+        <span class="n">waves</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_concurrency</span><span class="p">))</span>
+        <span class="n">scaled</span> <span class="o">=</span> <span class="n">waves</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout_per_sequence</span>
+        <span class="n">effective_timeout</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">,</span> <span class="n">scaled</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_timeout_cap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">effective_timeout</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">effective_timeout</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_timeout_cap</span><span class="p">)</span>
 
-                <span class="c1"># Map choices to Response objects</span>
-                <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Response</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">choice</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">):</span>
-                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span><span class="p">:</span>
+            <span class="n">last_exc</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">):</span>  <span class="c1"># 6 attempts total (0..5)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Call completions API with batch prompts</span>
+                    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                        <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span>
+                        <span class="n">prompt</span><span class="o">=</span><span class="n">prompts</span><span class="p">,</span>
+                        <span class="n">max_tokens</span><span class="o">=</span><span class="n">tokens</span><span class="p">,</span>
+                        <span class="n">timeout</span><span class="o">=</span><span class="n">effective_timeout</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="c1"># Map choices to Response objects</span>
+                    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Response</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">choice</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">):</span>
+                        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">Response</span><span class="p">(</span>
+                                <span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">text</span><span class="o">=</span><span class="n">choice</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+                                <span class="n">agent_index</span><span class="o">=</span><span class="n">agent_index</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="k">return</span> <span class="n">results</span>
+
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">last_exc</span> <span class="o">=</span> <span class="n">exc</span>
+                    <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="mi">5</span> <span class="ow">and</span> <span class="n">_is_retryable_connection_error</span><span class="p">(</span><span class="n">exc</span><span class="p">):</span>
+                        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="n">attempt</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="c1"># On error, return failed Response for each prompt</span>
+                    <span class="k">return</span> <span class="p">[</span>
                         <span class="n">Response</span><span class="p">(</span>
-                            <span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                            <span class="n">text</span><span class="o">=</span><span class="n">choice</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+                            <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                            <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                             <span class="n">agent_index</span><span class="o">=</span><span class="n">agent_index</span><span class="p">,</span>
                         <span class="p">)</span>
-                    <span class="p">)</span>
-                <span class="k">return</span> <span class="n">results</span>
-
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="c1"># On error, return failed Response for each prompt</span>
-                <span class="k">return</span> <span class="p">[</span>
-                    <span class="n">Response</span><span class="p">(</span>
-                        <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                        <span class="n">text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-                        <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                        <span class="n">agent_index</span><span class="o">=</span><span class="n">agent_index</span><span class="p">,</span>
-                    <span class="p">)</span>
-                    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">prompts</span>
-                <span class="p">]</span></div>
+                        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">prompts</span>
+                    <span class="p">]</span>
+            <span class="c1"># Should not reach here; if we do, treat last_exc as final failure</span>
+            <span class="k">assert</span> <span class="n">last_exc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">Response</span><span class="p">(</span>
+                    <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">last_exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">last_exc</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">agent_index</span><span class="o">=</span><span class="n">agent_index</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">prompts</span>
+            <span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="VLLMPool.send_all_batched">
@@ -413,6 +476,9 @@
         <span class="n">child</span><span class="o">.</span><span class="n">_concurrency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_concurrency</span>
         <span class="n">child</span><span class="o">.</span><span class="n">_connector_limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connector_limit</span>
         <span class="n">child</span><span class="o">.</span><span class="n">_timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span>
+        <span class="n">child</span><span class="o">.</span><span class="n">_batch_concurrency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_concurrency</span>
+        <span class="n">child</span><span class="o">.</span><span class="n">_timeout_per_sequence</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout_per_sequence</span>
+        <span class="n">child</span><span class="o">.</span><span class="n">_batch_timeout_cap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_timeout_cap</span>
         <span class="n">child</span><span class="o">.</span><span class="n">_semaphore</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_semaphore</span>
         <span class="n">child</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session</span>
         <span class="n">child</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span>
@@ -456,6 +522,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../batch_prompting.html">Batch Prompting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../context_length.html">Context length configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pools_and_connections.html">Pools and connections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../aggregators.html">Aggregators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
 </ul>
 

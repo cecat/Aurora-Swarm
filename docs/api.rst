@@ -8,7 +8,7 @@ Package (aurora_swarm)
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: aurora_swarm
-   :members: AgentEndpoint, AgentPool, Response, VLLMPool, parse_hostfile
+   :members: AgentEndpoint, AgentPool, Response, VLLMPool, EmbeddingPool, EmbeddingResponse, parse_hostfile
    :undoc-members:
    :show-inheritance:
 
@@ -50,6 +50,22 @@ VLLM pool
    :show-inheritance:
    :exclude-members: _get_model_max_context, _sub_pool
 
+Embedding pool
+~~~~~~~~~~~~~~
+
+:class:`EmbeddingPool` provides scatter-gather over OpenAI-compatible ``/v1/embeddings`` endpoints. It uses the same hostfile/endpoint model as :class:`~aurora_swarm.pool.AgentPool` (e.g. :func:`parse_hostfile` and :meth:`~aurora_swarm.embedding_pool.EmbeddingPool.by_tag` for role-based filtering). Use it with :func:`~aurora_swarm.patterns.embedding.scatter_gather_embeddings` for the same "pool + pattern" style as LLM scatter-gather.
+
+.. autoclass:: aurora_swarm.embedding_pool.EmbeddingResponse
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: aurora_swarm.embedding_pool.EmbeddingPool
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :exclude-members: _get_clients, _sub_pool
+
 Aggregators
 ~~~~~~~~~~~
 
@@ -74,6 +90,11 @@ Scatter-Gather
 
 .. autofunction:: aurora_swarm.patterns.scatter_gather.scatter_gather
 .. autofunction:: aurora_swarm.patterns.scatter_gather.map_gather
+
+Scatter-Gather (embeddings)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: aurora_swarm.patterns.embedding.scatter_gather_embeddings
 
 Tree-Reduce
 ~~~~~~~~~~~
