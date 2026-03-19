@@ -97,6 +97,7 @@ Aurora-Swarm/
 │   ├── hostfile.py            # Hostfile parser (AgentEndpoint)
 │   ├── pool.py                # AgentPool — async connection pool
 │   ├── vllm_pool.py           # VLLMPool — OpenAI-compatible batch prompting
+│   ├── embedding_pool.py      # EmbeddingPool — scatter-gather over /v1/embeddings
 │   ├── aggregators.py         # Response aggregation strategies
 │   └── patterns/
 │       ├── __init__.py
@@ -104,7 +105,8 @@ Aurora-Swarm/
 │       ├── scatter_gather.py  # Pattern 2 — Scatter-Gather
 │       ├── tree_reduce.py     # Pattern 3 — Tree-Reduce
 │       ├── blackboard.py      # Pattern 4 — Blackboard (shared-state)
-│       └── pipeline.py        # Pattern 5 — Pipeline (multi-stage DAG)
+│       ├── pipeline.py        # Pattern 5 — Pipeline (multi-stage DAG)
+│       └── embedding.py       # scatter_gather_embeddings (pool + pattern, same as LLM)
 ├── examples/
 │   ├── broadcast_aggregators.py   # Broadcast to all-but-one + majority_vote/concat
 │   ├── broadcast_aggregators.sh   # Launcher for broadcast_aggregators.py
@@ -253,6 +255,24 @@ Built-in aggregation helpers for collected responses:
 - `failure_report` — diagnostic summary of successes and failures
 
 See the [Aggregators documentation](https://brettin.github.io/Aurora-Swarm/aggregators.html) for details and the broadcast example.
+
+### Lab 3: Semantic uncertainty (UQ)
+
+This repo includes a small Lab 3-oriented semantic uncertainty module plus examples:
+
+- `aurora_swarm/uq/` — cluster-based semantic entropy, kernel language entropy (KLE), and semantic entropy probes
+- `examples/lab3_semantic_uncertainty.py` — end-to-end: sample \(S\) responses → embed → compute uncertainty
+- `examples/lab3_train_probe.py` — train a simple numpy ridge probe from hidden-state features → semantic entropy targets
+
+Embedding scatter-gather uses the same pool + pattern API as LLM: use `EmbeddingPool` with `scatter_gather_embeddings`; `parse_hostfile` and `by_tag("role", "embed")` work the same way as for LLM pools.
+
+Install optional dependencies and run unit tests:
+
+```bash
+source env.sh
+pip install -e ".[uq,dev]"
+pytest -v tests/test_uq.py
+```
 
 ---
 
