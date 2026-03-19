@@ -137,6 +137,7 @@ class VLLMPool(AgentPool):
                 api_key="EMPTY",  # vLLM convention
                 timeout=timeout,
             )
+        self._owns_openai_clients = True
 
     # -- model metadata -------------------------------------------------------
 
@@ -290,7 +291,6 @@ class VLLMPool(AgentPool):
         if not prompts:
             return []
 
-        ep = self._endpoints[agent_index]
         client = self._openai_clients[agent_index]
 
         # Compute max_tokens dynamically if not explicitly provided
@@ -444,5 +444,27 @@ class VLLMPool(AgentPool):
         child._model_max_context = self._model_max_context
         child._buffer = self._buffer
         child._model_max_context_cached = self._model_max_context_cached
-        child._openai_clients = self._openai_clients  # Share clients
+        # Child-local index -> AsyncOpenAI. AgentEndpoint is not hashable (tags dict),
+        # so map by identity (normal for slice/select/sample/by_tag) then == fallback.
+        child._openai_clients = {}
+        for i, ep in enumerate(endpoints):
+            j = next((k for k, p in enumerate(self._endpoints) if p is ep), None)
+            if j is None:
+                j = next((k for k, p in enumerate(self._endpoints) if p == ep), None)
+            if j is None:
+                raise ValueError(
+                    "VLLMPool sub-pool endpoint must appear in the parent pool "
+                    "(same AgentEndpoint reference or equal host/port/tags)."
+                )
+            child._openai_clients[i] = self._openai_clients[j]
+        child._owns_openai_clients = False
         return child
+
+    async def close(self) -> None:
+        if getattr(self, "_owns_openai_clients", False):
+            for client in getattr(self, "_openai_clients", {}).values():
+                try:
+                    await client.close()
+                except Exception:
+                    pass
+        await super().close()
