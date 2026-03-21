@@ -5,20 +5,15 @@ Run from the repo root (after ``pip install -e .``)::
 
     python getting_started/create_vllm_pool.py /path/to/agents.hostfile
 
-Or::
-
-    PYTHONPATH=. python getting_started/create_vllm_pool.py /path/to/agents.hostfile
 """
 
 from __future__ import annotations
-
 import argparse
+import asyncio
 import sys
-
 from aurora_swarm import VLLMPool, parse_hostfile
 
-
-def main() -> int:
+async def main() -> int:
     parser = argparse.ArgumentParser(
         description="Parse a hostfile and construct a VLLMPool."
     )
@@ -28,12 +23,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    try:
-        endpoints = parse_hostfile(args.hostfile)
-    except OSError as e:
-        print(f"Error reading hostfile: {e}", file=sys.stderr)
-        return 1
-
+    endpoints = parse_hostfile(args.hostfile)
     if not endpoints:
         print("No endpoints found in hostfile.", file=sys.stderr)
         return 1
@@ -42,8 +32,16 @@ def main() -> int:
     print(f"VLLMPool created: {pool.size} agent(s)")
     for i, ep in enumerate(pool.endpoints):
         print(f"  [{i}] {ep.url}")
+        client = pool._openai_clients[i]
+        try:
+            resp = await client.models.list()
+            model_ids = [m.id for m in resp.data]
+            print(f"  client_index={i} {ep.url}/v1/models -> {len(model_ids)} model(s): {model_ids}")
+        except Exception as e:
+            print(f"  client_index={i} {ep.url}/v1/models -> error: {e}")
+    print()
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))
