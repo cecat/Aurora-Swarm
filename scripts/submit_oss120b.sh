@@ -28,7 +28,7 @@ fi
 STAGE_WEIGHTS=${STAGE_WEIGHTS:-1}     # 1=stage model weights to /tmp, 0=skip staging
 STAGE_CONDA=${STAGE_CONDA:-1}         # 1=stage conda environment to /tmp, 0=skip staging
 USE_FRAMEWORKS=${USE_FRAMEWORKS:-0}   # 1=use frameworks module, 0=use conda environment
-BLACKBOARD=${BLACKBOARD:-1}           # 1=use blackboard mode, 0=use normal mode
+BLACKBOARD=${BLACKBOARD:-0}           # 1=use blackboard mode, 0=use normal mode
 
 # vLLM server settings
 VLLM_HOST_PORT=${VLLM_HOST_PORT:-6739}

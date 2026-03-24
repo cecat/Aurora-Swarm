@@ -24,6 +24,20 @@ async def test_post_batch_empty_prompts(mock_vllm_pool):
 
 
 @pytest.mark.asyncio
+async def test_post_batch_sub_pool_openai_client_matches_endpoint(mock_vllm_pool):
+    """Sub-pool re-indexes agents from 0; batch client must match sliced endpoint."""
+    sub = mock_vllm_pool.slice(2, 3)
+    assert sub.size == 1
+    ep = sub._endpoints[0]
+    client_base = str(sub._openai_clients[0].base_url).rstrip("/")
+    assert client_base == f"{ep.url}/v1"
+    responses = await sub.post_batch(0, ["sub-pool-batch"])
+    assert len(responses) == 1
+    assert responses[0].success
+    assert "sub-pool-batch" in responses[0].text
+
+
+@pytest.mark.asyncio
 async def test_send_all_batched(mock_vllm_pool):
     """Test send_all_batched groups prompts by agent and maintains order."""
     # 10 prompts with 4 agents = round-robin distribution
