@@ -1,12 +1,12 @@
-# ChiSim-LLM-Scaling.md
-**Aurora Swarm / ChiSim LLM-Agent Scaling Feasibility Analysis**
+# SwarmSim-Scaling.md
+**Aurora Swarm / SwarmSim Scaling Feasibility Analysis**
 *April 2026*
 
 ---
 
 ## 1. The Original Claim and the Math Problem
 
-The ChiSim-LLM-Design document (Section 5.2) states that running LLMs for all 2.7M agents is "computationally infeasible at present" and proposes Pilot A (100–500 LLM agents) as a starting point. This document examines whether there is a middle ground — a scale large enough to be epidemiologically meaningful, yet small enough that each simulated hour completes in a tractable wall-clock time.
+The SwarmSim-Design document (Section 5.2) states that running LLMs for all 2.7M agents is "computationally infeasible at present" and proposes Pilot A (100–500 LLM agents) as a starting point. This document examines whether there is a middle ground — a scale large enough to be epidemiologically meaningful, yet small enough that each simulated hour completes in a tractable wall-clock time.
 
 The user's starting hypothesis is:
 
@@ -29,7 +29,7 @@ From the Aurora Swarm batch-prompting benchmark (BATCH_PROMPTING.md, tested on `
 
 That is **~1.8 prompts/sec/endpoint** in the batch-mode measurement.
 
-The ChiSim agent prompt (Section 4 of ChiSim-LLM-Design.md) is long — approximately 800–1,200 tokens of system context plus the agent profile plus the task — with an expected response of ~100–200 tokens (structured JSON). Call it **~1,000 tokens input / 150 tokens output** per agent-timestep.
+The SwarmSim agent prompt (Section 4 of SwarmSim-Design.md) is long — approximately 800–1,200 tokens of system context plus the agent profile plus the task — with an expected response of ~100–200 tokens (structured JSON). Call it **~1,000 tokens input / 150 tokens output** per agent-timestep.
 
 On `gpt-oss-120b` (a 120B-parameter reasoning model), throughput in batch mode is heavily input-bound. The 7.24 prompts/sec figure above is with a small test — at production scale with long prompts and a concurrency-limited single endpoint, **~1–3 prompts/sec per endpoint** is a realistic range. Larger, purpose-built models will be slower; smaller models will be faster.
 
@@ -250,7 +250,7 @@ Three parallel ensemble members × 90 days × 24 timesteps = 3 calibration data 
 
 ### 8.4 Separating LLM and Deterministic Agents
 
-The hybrid design from ChiSim-LLM-Design Section 5.1 still applies. Even in a 60K-agent neighborhood simulation, not all agents need full LLM decision-making. A natural partitioning:
+The hybrid design from SwarmSim-Design Section 5.1 still applies. Even in a 60K-agent neighborhood simulation, not all agents need full LLM decision-making. A natural partitioning:
 
 - **Full LLM agency (~10–20%)**: Behaviorally interesting demographics — essential workers, elderly with comorbidities, parents of school-age children, non-compliant young adults. These are the agents whose decisions are hardest to parameterize deterministically.
 - **Deterministic agents (~80–90%)**: Agents whose behavior is highly predictable — hospitalized agents, deceased agents, fully compliant retirees, infants. These cost zero LLM calls.
@@ -294,4 +294,4 @@ If smaller models (7B–13B) are used with careful prompt compression, 10–20 p
 
 ---
 
-*Analysis prepared April 2026. Based on Aurora Swarm measured benchmarks, published ChiSim/CityCOVID papers, and ChiSim-LLM-Design.md.*
+*Analysis prepared April 2026. Based on Aurora Swarm measured benchmarks, published ChiSim/CityCOVID papers, and SwarmSim-Design.md.*

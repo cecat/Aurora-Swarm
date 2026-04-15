@@ -1,4 +1,4 @@
-# ChiSIM / CityCOVID → LLM Agent Design
+# SwarmSim Design: LLM Agent Epidemic Simulation
 **Argonne National Laboratory & University of Chicago**
 *Prepared for TPC / OpenClaw Research — April 2026*
 
