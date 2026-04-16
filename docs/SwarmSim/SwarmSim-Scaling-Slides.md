@@ -1,4 +1,64 @@
-# SwarmSim Scaling: Two Scenarios
+# SwarmSim Scaling: Slide Deck
+
+---
+
+## Slide 0 — ChiSim / CityCOVID: The Flagship System
+
+Developed by Argonne National Laboratory and the University of Chicago, ChiSim (Chicago Social Interaction Model) is a city-scale agent-based model used operationally during the COVID-19 pandemic to advise the City of Chicago, Cook County, and the Illinois Governor's COVID-19 Modeling Task Force. CityCOVID is the COVID-19 application built on the ChiSim framework; it ran on Argonne Leadership Computing Facility (ALCF) resources (originally Theta, Cray XC40, 11.7 PFlops) and completes a 90-day scenario in minutes on 1,000+ MPI ranks.
+
+**Scale**
+
+| | Count |
+|---|---|
+| Synthetic agents | 2.7 million (full Chicago population) |
+| Geolocated places | 1.2 million (households, schools, workplaces, hospitals, community venues) |
+| Timestep | 1 hour |
+| Typical scenario | 90 simulated days |
+| Ensemble size | Hundreds of runs for ABC calibration; tens of runs for policy comparison scenarios |
+| Compute | Distributed MPI / Repast HPC (C++); agents migrate between MPI ranks each tick |
+
+**What each agent carries**
+
+| Category | Key attributes |
+|---|---|
+| Identity (static) | Age, sex, race/ethnicity, zip code, household ID, income bracket |
+| Role (static) | Occupation type, can-work-from-home, uses-transit, workplace ID, school ID |
+| Health baseline (static) | Comorbidities (diabetes, hypertension, obesity, COPD…), healthcare access |
+| Location (dynamic) | Current place ID, schedule index |
+| Disease (dynamic) | State (see below), days in state, cumulative exposure dose |
+| Behavior (dynamic) | Isolation compliance, mask wearing, distancing compliance, testing seeking |
+
+**Disease state machine (changes daily, driven by hourly exposure)**
+
+```
+SUSCEPTIBLE → EXPOSED → PRE-SYMPTOMATIC ─┐
+                       → ASYMPTOMATIC ───┤
+                                         ↓
+                              SYMPTOMATIC-MILD → SYMPTOMATIC-SEVERE
+                                                       ↓
+                                              HOSPITALIZED → ICU
+                                                    ↓           ↓
+                                               RECOVERED    DECEASED
+```
+
+**What happens at each 1-hour tick (per agent)**
+
+| Step | What the agent does | Governed by |
+|---|---|---|
+| **Move** | Look up schedule → get target place; apply policy filter (is this place closed?); apply compliance draw (do I actually stay home?) | ATUS activity schedule + NPI policy state + `isolation_compliance` |
+| **Interact** | At the destination, compute infectious exposure from every co-located infectious agent | Co-occupant count, `base_transmission_prob`, density scaling, mask factors |
+| **Transition** | Probabilistically advance disease state based on exposure dose and days in current state | Age/comorbidity-weighted transition probabilities (calibrated via ABC) |
+| **Behavior update** | If newly symptomatic: boost `isolation_compliance`; if policy changed: update schedule filters | `isolation_onset_boost` scalar; active NPI policy set |
+
+**How ChiSim is calibrated and used**
+
+Transmission parameters (base infection probability, density scaling, asymptomatic infectivity multiplier, age-stratified severity) are estimated via Approximate Bayesian Computation (ABC) using EMEWS/Swift-T on ALCF — hundreds of ensemble runs compared against observed daily hospitalizations and deaths. Once calibrated, policy scenarios (school closures, mask mandates, stay-at-home orders) are run as controlled experiments: two runs identical except for one policy change, difference in epidemic curve attributed to that policy.
+
+**The limitation SwarmSim addresses**
+
+All behavioral parameters — `isolation_compliance`, `mask_wearing`, `distancing_compliance`, `testing_seeking`, `isolation_onset_boost` — are scalar constants, uniform across the population. A retired 70-year-old and a 25-year-old essential worker with rent due have the same compliance rate. Compliance does not erode under prolonged lockdown. These are the five parameters SwarmSim replaces with demographically-stratified, time-varying lookup tables.
+
+---
 
 ---
 
@@ -44,4 +104,6 @@ At 8K nodes with prompts tuned to complete in 20 seconds, SwarmSim can simulate 
 | **2.7M (full Chicago)** | **8.8s** | **~5.3 hours** | **Research viable — 4 runs/day** |
 | 3M | 9.8s | ~5.9 hours | Research viable |
 
-**Conclusion:** This target is achievable within 6 months — the Aurora hardware is in place, the Aurora Swarm infrastructure is built, and the primary engineering work is prompt compression to reduce per-batch latency from 50s to 20s. We should build toward this operating point now: a system that runs full Chicago in a single working day changes the research question from *"how do we approximate ChiSim?"* to *"what can we learn that ChiSim structurally cannot tell us?"*
+**Conclusion:** This target is achievable within 6 months — the Aurora hardware is in place, the Aurora Swarm infrastructure is built, and the primary engineering work is reducing per-batch latency from 50s to 20s. We should build toward this operating point now: a system that runs full Chicago in a single working day changes the research question from *"how do we approximate ChiSim?"* to *"what can we learn that ChiSim structurally cannot tell us?"*
+
+> *The 20s/batch figure is an engineering target, not a measured result — current benchmarks show ~50s at 256 concurrent prompts using `gpt-oss-120b`. Three levers can close this gap, likely in combination: (1) **smaller model** — a distilled 7B–13B behavioral model fine-tuned on SwarmSim outputs could run 5–10× faster per prompt; (2) **prompt compression** — SwarmSim's ~750-token agent prompts can be reduced by eliminating redundant context and tightening the JSON schema, with each 2× reduction in token count yielding roughly proportional throughput gains; (3) **vLLM tuning** — adjusting batch size, KV-cache configuration, and tensor parallelism for the specific Aurora GPU architecture (Intel Ponte Vecchio) may recover significant latency at no modeling cost. The 1K pilot provides the data needed for (1); (2) and (3) are engineering tasks independent of scientific validation.*
