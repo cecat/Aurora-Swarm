@@ -10,6 +10,8 @@ API Reference: https://brettin.github.io/Aurora-Swarm/
 
 ## Setup & Installation
 
+Requires **Python 3.11+**. Core runtime depends on `aiohttp>=3.9` and `openai>=1.0` (the OpenAI Python SDK is used as the vLLM HTTP client).
+
 ```bash
 pip install -e .                  # Core only
 pip install -e ".[dev]"           # Add pytest, pytest-asyncio
@@ -24,11 +26,18 @@ On HPC (Aurora supercomputer): source `env.sh` to load `module load frameworks` 
 
 ```bash
 # Tests
-pytest -v                          # All unit tests
-pytest -v tests/                   # Unit tests only
-pytest -v tests/integration/       # Integration tests — require real vLLM servers + --hostfile
+pytest -v                                        # All unit tests
+pytest -v tests/                                 # Unit tests only
+pytest -v tests/test_scatter_gather.py           # Single test file
+pytest -v tests/test_scatter_gather.py::test_foo # Single test by name
+pytest -v tests/integration/                     # Integration tests — require live vLLM endpoints
 
-# Docs
+# Integration tests need a hostfile; provide via CLI or env var:
+pytest -v tests/integration/ --hostfile path/to/hostfile
+AURORA_SWARM_HOSTFILE=path/to/hostfile pytest -v tests/integration/
+# Suite auto-skips if no hostfile is found.
+
+# Docs (auto-deployed to GitHub Pages on push to main)
 cd docs && make html               # Build Sphinx docs → docs/_build/
 
 # SwarmSim pilot
@@ -105,6 +114,13 @@ Optional module (requires `.[uq]`). Implements semantic entropy and kernel langu
 | Test fixtures & mocks | `tests/conftest.py` |
 | vLLM server health check | `scripts/wait_for_vllm_servers.py` |
 
+## Additional Resources
+
+- `getting_started/` — Minimal runnable examples: `create_vllm_pool.py` (basic pool) and `create_vllm_subpools.py` (tag-based sub-pools). Start here before reading `examples/`.
+- `docs/SwarmSim/` — Five detailed design documents covering SwarmSim overview, architecture, scaling (1K–60K agents), ensemble strategy, and design rationale (trade-offs for stateless inference, prompt token budgets, KV-cache ordering).
+- `extra/` — Quick-reference guides for batch prompting and context length configuration.
+- `scripts/wait_for_vllm_servers.py` — Health-checks all nodes in a hostfile before a run; used in HPC job scripts.
+
 ## Testing Notes
 
-Unit tests use mock HTTP servers (no real LLM required). Integration tests in `tests/integration/` require live vLLM endpoints specified via `--hostfile`. The `pytest-asyncio` mode is set to `auto` in `pyproject.toml`.
+Unit tests use mock HTTP servers (no real LLM required). Integration tests in `tests/integration/` require live vLLM endpoints specified via `--hostfile` or `AURORA_SWARM_HOSTFILE` env var; the suite auto-skips when neither is set. The `pytest-asyncio` mode is set to `auto` in `pyproject.toml`.

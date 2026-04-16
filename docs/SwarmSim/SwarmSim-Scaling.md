@@ -29,9 +29,15 @@ From the Aurora Swarm batch-prompting benchmark (BATCH_PROMPTING.md, tested on `
 
 That is **~1.8 prompts/sec/endpoint** in the batch-mode measurement.
 
+> **⚠ Critical caveat: this benchmark does not reflect SwarmSim operating conditions.**
+>
+> The measurement used 20 short prompts across 4 endpoints — 5 prompts per endpoint. At that concurrency the GPU is barely utilized; the 12% speedup over non-batch mode measures HTTP overhead reduction, not GPU throughput under load. The number tells us nothing reliable about performance at the concurrency levels (64–256 prompts/endpoint), prompt lengths (~750 tokens input, ~150 tokens output), and endpoint counts (12,000–24,000) that SwarmSim actually requires.
+>
+> **All scaling conclusions in this document that depend on a prompts/sec figure are unvalidated until the benchmark described in Section 12 is run.** The 1–3 prompts/sec estimate below, the 50-second/256-prompt hypothesis, and the derived agent ceilings are informed estimates, not measured results.
+
 The SwarmSim agent prompt (Section 4 of SwarmSim-Design.md) is long — approximately 800–1,200 tokens of system context plus the agent profile plus the task — with an expected response of ~100–200 tokens (structured JSON). Call it **~1,000 tokens input / 150 tokens output** per agent-timestep.
 
-On `gpt-oss-120b` (a 120B-parameter reasoning model), throughput in batch mode is heavily input-bound. The 7.24 prompts/sec figure above is with a small test — at production scale with long prompts and a concurrency-limited single endpoint, **~1–3 prompts/sec per endpoint** is a realistic range. Larger, purpose-built models will be slower; smaller models will be faster.
+On `gpt-oss-120b` (a 120B-parameter reasoning model), throughput in batch mode is heavily input-bound. The 7.24 prompts/sec figure above is with a small test — at production scale with long prompts and a concurrency-limited single endpoint, **~1–3 prompts/sec per endpoint** is a plausible range, but this has not been measured under realistic conditions. Larger, purpose-built models will be slower; smaller models will be faster.
 
 ### 2.2 Scaling to 3,000 endpoints
 
@@ -263,14 +269,15 @@ At 60K total agents with 15% LLM share: **9,000 LLM calls per simulated hour**, 
 
 | Question | Answer |
 |---|---|
-| Is 3M LLM agents feasible? | No — ~12 days per 90-day scenario; intractable for research |
+| Is 3M LLM agents feasible on 3,000 endpoints with a 120B model? | No — ~12 days per 90-day scenario; intractable for research |
+| Is 3M LLM agents feasible on different infrastructure? | **Yes** — see Section 11 |
 | Is 60K LLM agents feasible? | **Yes** — ~6 hours per scenario on 3,000 endpoints |
 | Is 10K LLM agents feasible? | **Yes** — ~1 hour per scenario; allows rapid iteration |
 | Is there a scientifically meaningful question? | **Yes** — behavioral heterogeneity studies at neighborhood scale are novel and publishable |
 | Does Aurora Swarm support this? | **Yes** — `scatter_gather` with batch mode handles this directly |
 | What is the right framing shift? | Replace "simulate Chicago" with "simulate a Chicago neighborhood with high-fidelity behavioral agents" |
 
-The user's math is correct: naive full-city LLM simulation is intractable. But the 60K-agent neighborhood simulation is both feasible on the described hardware and scientifically meaningful — and can answer questions the deterministic ABM structurally cannot.
+The 60K-agent neighborhood simulation is both feasible on the described hardware and scientifically meaningful — and can answer questions the deterministic ABM structurally cannot. 3M agents is not intractable in principle; it requires a different infrastructure operating point, described in Section 11.
 
 ---
 
@@ -294,4 +301,131 @@ If smaller models (7B–13B) are used with careful prompt compression, 10–20 p
 
 ---
 
-*Analysis prepared April 2026. Based on Aurora Swarm measured benchmarks, published ChiSim/CityCOVID papers, and SwarmSim-Design.md.*
+---
+
+## 11. The Path to 3M LLM Agents
+
+The analysis above treats 3,000 endpoints and a 120B-parameter model as fixed constraints. They are not. Scaling to 3M LLM agents is achievable by pulling two independent levers — endpoint count and inference speed — and by a third technique, model distillation, that improves both simultaneously.
+
+### 11.1 The Two Independent Levers
+
+The core equation is:
+
+```
+N_agents = N_endpoints × prompts_per_sec_per_endpoint × wall_clock_budget_per_tick
+```
+
+The two variables are independent. Either alone can close a large fraction of the gap to 3M agents.
+
+**Lever 1 — More endpoints.** Aurora Swarm is designed to scale horizontally; adding endpoints requires no code changes. With 150,000 endpoints at current model throughput (2 prompts/sec), the 10-second tick budget supports 3M agents. This is an infrastructure question, not an architecture question.
+
+**Lever 2 — Faster inference.** Smaller models have dramatically higher throughput. A 7B–13B model achieves 10–20 prompts/sec per endpoint — a 5–10× improvement. At 20 prompts/sec, only 15,000 endpoints are needed for 3M agents within a 10-second tick budget.
+
+| Scenario | Endpoints | Prompts/sec/endpoint | Agent ceiling (10s budget) | 90-day run time |
+|---|---|---|---|---|
+| Current (120B model) | 3,000 | 2 | 60K | ~6 hours |
+| Current model, scaled endpoints | 150,000 | 2 | 3M | ~6 hours |
+| Small model (7B–13B), current endpoints | 3,000 | 20 | 600K | ~6 hours |
+| Small model + modest scale-up | 15,000 | 20 | 3M | ~6 hours |
+| 100K endpoints, 0.1s latency (10 prompts/sec) | 100,000 | 10 | 1M agent-ticks/sec → 3s/tick | ~1.8 hours |
+
+The 15,000-endpoint + small-model scenario is the most practical near-term path: it requires a plausible HPC allocation and avoids the infrastructure required for 150K endpoints.
+
+### 11.2 Model Distillation
+
+The most powerful path to both speed and scale is **behavioral model distillation**: use the 1K pilot's outputs to fine-tune a small (7B–13B parameter) model that mimics the behavioral decisions of the full-scale LLM.
+
+The 1K pilot generates 2.16M labeled training examples (agent context → behavioral decision JSON) over a 90-day run. That is sufficient data to fine-tune a small model to reproduce the behavioral patterns — compliance heterogeneity, fatigue dynamics, demographic variation — that the large model generates. The distilled model:
+
+- Runs at 10–20 prompts/sec vs. ~2 prompts/sec for the 120B model (5–10× throughput gain)
+- Requires fewer GPU resources per endpoint (7B fits on a single GPU; 120B requires multiple)
+- Retains the behavioral richness derived from the large model's reasoning, now encoded in weights rather than generated at inference time
+
+This means the 1K pilot has a secondary output beyond scientific validation: it produces the training corpus for a distilled behavioral model that makes city-scale LLM simulation tractable. The distilled model is then what runs in production.
+
+### 11.3 Prompt Compression as a Third Lever
+
+Inference time scales with token count. The current SwarmSim prompt is ~750 tokens (250 effective after APC cache hits). Compressing the dynamic context blocks by 2× yields roughly 2× throughput from the same hardware — equivalent to doubling the endpoint count at no infrastructure cost. Prompt compression and distillation are complementary: a distilled model can be fine-tuned on compressed prompts, compounding both gains.
+
+### 11.4 Revised Summary
+
+3M LLM agents is not an aspirational ceiling — it is an engineering target reachable through a defined sequence:
+
+1. **1K pilot** — validate behavioral realism; generate distillation training corpus
+2. **Distilled small model** — fine-tune on pilot outputs; achieve 10–20 prompts/sec per endpoint
+3. **15K–30K endpoint allocation** — plausible on a major HPC system of the near future
+4. **Prompt compression** — reduce effective token count by 2×
+
+Steps 1 and 2 are software and research work. Steps 3 and 4 follow from them. The architectural work is already done.
+
+---
+
+---
+
+## 12. Required Benchmark: Throughput Under SwarmSim Conditions
+
+All scaling conclusions in this document rest on a throughput figure (prompts/sec per endpoint) that has not been measured under conditions representative of SwarmSim. The existing benchmark (20 short prompts, 4 endpoints, one run) measures HTTP overhead, not GPU throughput. The following benchmark must be run before any scaling claim can be treated as validated.
+
+### 12.1 What to Measure
+
+**Target conditions:**
+- Model: `openai/gpt-oss-120b` (production model)
+- Prompt length: ~750 tokens input (SwarmSim agent prompt, not a short test string)
+- Response length: ~150 tokens (structured JSON behavioral decision)
+- Concurrency levels: 16, 32, 64, 128, 256 prompts per endpoint
+- Endpoints: 1 endpoint (single-node characterization), then 4, then 16
+- Sustained load: run for at least 5 minutes at each concurrency level, not a single batch
+
+**Metrics to record at each concurrency level:**
+- Prompts completed per second (throughput)
+- Time to complete one full batch of N prompts (latency)
+- GPU utilization (is the endpoint the bottleneck, or the network?)
+- Whether throughput scales linearly with concurrency or saturates
+
+### 12.2 Why This Matters
+
+The difference between plausible throughput estimates spans nearly an order of magnitude:
+
+| Assumption | Source | 4K-node fleet throughput | 4K-node sweet-spot agent count |
+|---|---|---|---|
+| 1.8 prompts/sec/endpoint | Extrapolated from batch benchmark | 21,600/sec | ~216K agents |
+| 2 prompts/sec/endpoint | Conservative estimate in docs | 24,000/sec | ~240K agents |
+| 5.12 prompts/sec/endpoint | 256 prompts in 50s (hypothesis) | 61,440/sec | ~600K agents |
+| 10 prompts/sec/endpoint | Optimistic small-model estimate | 120,000/sec | ~1.2M agents |
+
+The agent ceiling for a 6-hour 90-day run ranges from 216K to 1.2M depending on which number is correct. That difference determines whether SwarmSim at 4K nodes is a neighborhood-scale tool or a district-scale tool — and whether the ChiSim integration strategy (Section 9 of SwarmSim-ChiSim-Integration.md) is necessary or optional.
+
+### 12.3 Benchmark Script
+
+The benchmark should use Aurora Swarm's existing `VLLMPool` with a realistic SwarmSim prompt:
+
+```python
+import asyncio, time
+from aurora_swarm import VLLMPool, parse_hostfile
+from aurora_swarm.patterns.scatter_gather import scatter_gather
+
+# Use a real SwarmSim-length prompt, not a short test string
+BENCHMARK_PROMPT = """[~750 token SwarmSim agent prompt here]"""
+
+async def benchmark(hostfile: str, n_prompts: int):
+    endpoints = parse_hostfile(hostfile)
+    async with VLLMPool(endpoints, model="openai/gpt-oss-120b", use_batch=True) as pool:
+        prompts = [BENCHMARK_PROMPT] * n_prompts
+        t0 = time.perf_counter()
+        responses = await scatter_gather(pool, prompts)
+        elapsed = time.perf_counter() - t0
+        throughput = n_prompts / elapsed
+        print(f"n={n_prompts}, endpoints={len(endpoints)}, "
+              f"time={elapsed:.2f}s, throughput={throughput:.2f} prompts/sec")
+
+for n in [16, 32, 64, 128, 256]:
+    asyncio.run(benchmark("hostfile.txt", n))
+```
+
+### 12.4 Update This Document
+
+Once the benchmark is run, replace the estimate in Section 2.1 with the measured value and regenerate the scaling tables in Sections 5 and 11 using the actual throughput. The tables as written use placeholder estimates — they should not be cited in publications or proposals until validated.
+
+---
+
+*Analysis prepared April 2026. Based on Aurora Swarm measured benchmarks, published ChiSim/CityCOVID papers, and SwarmSim-Design.md. See Section 12 for benchmark validation requirements.*
