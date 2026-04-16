@@ -62,7 +62,36 @@ All behavioral parameters — `isolation_compliance`, `mask_wearing`, `distancin
 
 ---
 
-## Slide 1 — Today's Capability (1K nodes, 3 endpoints, 256 concurrent prompts, 50s/batch)
+## Slide 1 — How SwarmSim Works: Design Choices
+
+ChiSim agents are stateful C++ objects living in memory across MPI ranks; SwarmSim agents are stateless LLM calls. Every design choice below solves a problem that gap creates.
+
+**ChiSim vs. SwarmSim: how we did things differently**
+
+| Dimension | ChiSim | SwarmSim |
+|---|---|---|
+| **Agent behavior** | Deterministic coded rules | LLM prompt-response each tick |
+| **Behavioral heterogeneity** | Parameterized scalars (age, occupation) | Emergent from LLM reasoning over full agent profile |
+| **Agent memory** | Stateful in-process across all ticks | 5-scalar behavioral state vector + compressed episodic memory |
+| **Agent-to-agent communication** | None (co-location only) | Three-layer: co-location context, social inbox, place event log |
+| **Simulation architecture** | Distributed MPI / Repast HPC | Centralized coordinator; stateless GPU inference servers |
+| **Compute substrate** | CPU-heavy MPI ranks | GPU endpoints via vLLM + Aurora Swarm |
+| **Disease model** | CityCOVID SEIR+ state machine | Same — borrowed directly |
+| **Transmission model** | Co-location, ventilation, density, masks | Identical |
+| **Activity schedules** | ATUS-calibrated | Same archetype logic (8 occupation types, 168-slot weeks) |
+| **Reproducibility** | Deterministic given seed | Stochastic — ensemble runs required |
+
+**Key implementation problems solved**
+
+- **Agent memory across 2,160 ticks** — LLM inference is stateless; solved with a 5-scalar behavioral state vector (`fear`, `compliance_fatigue`, `financial_pressure`, `perceived_risk`, `trust_in_news`) updated deterministically each tick, plus episodic memory compression every 7 sim-days into ≤75 tokens injected into the prompt
+- **Prompt token budget** — naive full-history prompts exceeded 1,000 tokens; solved with a 4-block prompt structure (static blocks first) that exploits vLLM's Automatic Prefix Caching, reducing effective per-tick payload from ~750 to ~250 tokens
+- **HTTP overhead at scale** — 1 HTTP call per agent per tick = millions of round-trips; solved with batch prompting (256 prompts per call), cutting HTTP requests by 100×
+- **Scaling the coordinator** — Python dicts hold all state for the 1K pilot; Redis (behavioral state) + Postgres (profiles, metrics) specified for district-scale runs, keeping the coordinator a thin orchestration layer
+- **Simplicity vs. MPI** — no agent migration, no inter-rank communication patterns; scaling is adding vLLM endpoints, not re-architecting
+
+---
+
+## Slide 2 — Today's Capability (1K nodes, 3 endpoints, 256 concurrent prompts, 50s/batch)
 
 **Fleet:** 1,000 nodes × 3 endpoints × (256 prompts / 50s) = **15,360 agent-ticks/sec**
 
