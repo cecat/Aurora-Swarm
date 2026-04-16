@@ -2,7 +2,36 @@
 
 ---
 
-## Slide 0 — ChiSim / CityCOVID: The Flagship System
+## Slide 0a — The State of the Art: Rules-Based Agent Behavior
+
+Rules-based agent behavior is the universal approach in production-scale social simulation — driven by the constraint that per-agent logic must reduce to a few arithmetic operations per tick. No production-scale disease or transportation model currently uses LLM reasoning for individual agent decisions.
+
+**Leading disease spread models**
+
+| Model | Institution | Scale | Approach |
+|---|---|---|---|
+| **ChiSim / CityCOVID** | Argonne / UChicago | 2.7M agents | Rules-based, MPI C++ |
+| **Covasim** | Institute for Disease Modeling (Gates Foundation) | 100K–1M | Rules-based, Python |
+| **FRED** | U. Pittsburgh | Synthetic US population | Rules-based, C++ |
+| **EpiSims / EpiSimdemics** | Los Alamos / Virginia Tech | Millions | Rules-based, HPC |
+| **OpenABM-Covid19** | Oxford | 100K–1M | Rules-based, C++ |
+| **GLEaM** | Northeastern / ISI Foundation | Global | Metapopulation (not agent-level) |
+
+**Leading transportation models**
+
+| Model | Institution | Scale | Approach |
+|---|---|---|---|
+| **MATSim** | ETH Zurich (open source) | Millions of trips | Rules-based, Java |
+| **SUMO** | German Aerospace Center (DLR) | Road network | Rules-based, C++ |
+| **ActivitySim** | Open source consortium (US MPOs) | Regional millions | Rules-based, Python |
+| **SimMobility** | MIT | City scale | Rules-based, C++ |
+| **VISSIM** | PTV Group (commercial) | Corridor / intersection | Rules-based |
+
+SwarmSim is, to our knowledge, the first system to test whether LLM inference at scale can replace rules-based behavioral logic in a production-grade social simulation.
+
+---
+
+## Slide 0b — ChiSim / CityCOVID: The Flagship System
 
 Developed by Argonne National Laboratory and the University of Chicago, ChiSim (Chicago Social Interaction Model) is a city-scale agent-based model used operationally during the COVID-19 pandemic to advise the City of Chicago, Cook County, and the Illinois Governor's COVID-19 Modeling Task Force. CityCOVID is the COVID-19 application built on the ChiSim framework; it ran on Argonne Leadership Computing Facility (ALCF) resources (originally Theta, Cray XC40, 11.7 PFlops) and completes a 90-day scenario in minutes on 1,000+ MPI ranks.
 
