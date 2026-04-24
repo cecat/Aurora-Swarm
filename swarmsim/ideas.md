@@ -1,5 +1,5 @@
 ## Prompt
-*I am imagining various systems, that have 10s of thousands of similar components, or a finite set of component classes/types, each of which has semantic state and non-deterministic (influenced by semantic state and external stimuli including other components) behavior over time.  Epidemiology or transportation involve many many humans, but I am not that interested in the examples you provided earlier other than hte combinatorial search in bio or materials - I need examples that are well-grounded in quantitative science, which makes social/policy challenging.*
+*I am imagining various systems, that have 10s of thousands of similar components, or a finite set of component classes/types, each of which has semantic state and non-deterministic (influenced by semantic state and external stimuli including other components) behavior over time.  Epidemiology or transportation involve many many humans, but I am not that interested in the examples you provided earlier other than the combinatorial search in bio or materials - I need examples that are well-grounded in quantitative science, which makes social/policy challenging.*
 
 ## Claude Opus 4.7
 
